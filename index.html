@@ -11,10 +11,14 @@
 <body>
   <header class="topbar">
     <h1>Casino Hold'em</h1>
-    <div class="balance">Баланс: <strong id="balance">1000</strong></div>
+    <div class="balance">
+      Баланс: <strong id="balance">1000</strong>
+      <span class="balance-delta" id="balance-delta" aria-hidden="true"></span>
+      <button type="button" class="add-btn" id="btn-deposit" title="Пополнить счёт" aria-label="Пополнить счёт">+</button>
+    </div>
     <div class="top-actions">
+      <button type="button" class="link-btn" id="btn-account">Счёт</button>
       <button type="button" class="link-btn" id="btn-rules">Правила</button>
-      <button type="button" class="link-btn" id="btn-reset">Сброс</button>
     </div>
   </header>
 
@@ -57,7 +61,40 @@
     <div class="actions" id="actions"></div>
   </main>
 
-  <footer class="stats" id="stats"></footer>
+  <footer class="footer">
+    <button type="button" class="stats" id="stats" title="Открыть счёт"></button>
+  </footer>
+
+  <dialog id="account" aria-labelledby="account-title">
+    <div class="rules-body">
+      <h2 id="account-title">Счёт</h2>
+      <table class="ledger"><tbody id="ledger"></tbody></table>
+      <p class="hint" id="ledger-since"></p>
+
+      <h3>Пополнить</h3>
+      <form id="deposit-form" class="deposit" novalidate>
+        <div class="deposit-presets" id="deposit-presets"></div>
+        <div class="deposit-custom">
+          <input id="deposit-input" type="number" inputmode="numeric" min="1" step="1" value="1000" aria-label="Сумма пополнения">
+          <button type="submit" class="btn primary small">Добавить</button>
+        </div>
+        <div class="deposit-msg" id="deposit-msg" role="status"></div>
+      </form>
+
+      <h3>История</h3>
+      <ol class="history" id="history"></ol>
+
+      <h3>Сброс</h3>
+      <div class="reset-row">
+        <button type="button" class="btn small" id="btn-reset-stats">Обнулить статистику</button>
+        <button type="button" class="btn small danger" id="btn-reset-all">Сбросить всё (баланс 1 000)</button>
+      </div>
+
+      <form method="dialog" class="close-row">
+        <button class="btn primary">Закрыть</button>
+      </form>
+    </div>
+  </dialog>
 
   <dialog id="rules">
     <form method="dialog" class="rules-body">
@@ -93,6 +130,7 @@
   </dialog>
 
   <script src="js/poker.js"></script>
+  <script src="js/account.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>
