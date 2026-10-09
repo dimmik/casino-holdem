@@ -90,3 +90,8 @@ test('колода и тасовка', () => {
   assert.strictEqual(d.length, 52);
   assert.strictEqual(new Set(d.map(c => c.id)).size, 52);
 });
+
+test('теоретические вероятности в сумме дают 1', () => {
+  const sum = P.HAND_PROB_7.reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(sum - 1) < 0.001, sum);
+});

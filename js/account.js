@@ -7,8 +7,12 @@
   const MAX_DEPOSIT = 1000000;
   const HISTORY_LIMIT = 100;
 
+  function freshCombos() {
+    return { n: 0, player: new Array(10).fill(0), dealer: new Array(10).fill(0) };
+  }
+
   function freshLedger(now, start) {
-    return { since: now, start, deposited: 0, won: 0, lost: 0, hands: 0, best: 0 };
+    return { since: now, start, deposited: 0, won: 0, lost: 0, hands: 0, best: 0, combos: freshCombos() };
   }
 
   function fresh(now) {
@@ -29,6 +33,7 @@
   function migrate(raw, now) {
     if (raw && raw.v === 2 && isNum(raw.balance) && raw.ledger && Array.isArray(raw.history)) {
       raw.pending = isNum(raw.pending) ? raw.pending : 0;
+      if (!raw.ledger.combos) raw.ledger.combos = freshCombos();
       return raw;
     }
     if (raw && isNum(raw.balance) && raw.stats) {
@@ -94,6 +99,14 @@
     return n;
   }
 
+  // Итоговые комбинации (категории 0–9) игрока и дилера за раздачу.
+  function recordCombos(s, playerCat, dealerCat) {
+    const c = s.ledger.combos;
+    c.n += 1;
+    c.player[playerCat] += 1;
+    c.dealer[dealerCat] += 1;
+  }
+
   // Обнулить учёт, оставив текущий баланс.
   function resetStats(s, now) {
     s.ledger = freshLedger(now, s.balance + s.pending);
@@ -115,7 +128,7 @@
 
   const Account = {
     START_BALANCE, MAX_DEPOSIT, HISTORY_LIMIT,
-    fresh, migrate, stake, settle, forfeitPending, parseAmount, deposit, resetStats, resetAll, expectedBalance,
+    fresh, migrate, stake, settle, forfeitPending, parseAmount, deposit, recordCombos, resetStats, resetAll, expectedBalance,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Account;

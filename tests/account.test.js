@@ -73,3 +73,18 @@ test('история ограничена', () => {
   for (let i = 0; i < A.HISTORY_LIMIT + 20; i++) A.deposit(s, 1, i);
   assert.strictEqual(s.history.length, A.HISTORY_LIMIT);
 });
+
+test('статистика комбинаций', () => {
+  const s = A.fresh(1);
+  A.recordCombos(s, 4, 1);
+  A.recordCombos(s, 4, 5);
+  assert.strictEqual(s.ledger.combos.n, 2);
+  assert.strictEqual(s.ledger.combos.player[4], 2);
+  assert.strictEqual(s.ledger.combos.dealer[5], 1);
+  A.resetStats(s, 2);
+  assert.strictEqual(s.ledger.combos.n, 0);
+  // старое сохранение v2 без комбинаций
+  const old = A.fresh(1);
+  delete old.ledger.combos;
+  assert.strictEqual(A.migrate(old, 3).ledger.combos.n, 0);
+});
