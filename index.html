@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Casino Hold'em</title>
+  <meta name="description" content="Casino Hold'em — покер против дилера: Анте, Колл и AA Bonus.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Casino Hold'em</h1>
+    <div class="balance">Баланс: <strong id="balance">1000</strong></div>
+    <div class="top-actions">
+      <button type="button" class="link-btn" id="btn-rules">Правила</button>
+      <button type="button" class="link-btn" id="btn-reset">Сброс</button>
+    </div>
+  </header>
+
+  <main class="table">
+    <section class="zone" aria-label="Дилер">
+      <div class="zone-label">Дилер <span class="hand-name" id="dealer-hand"></span></div>
+      <div class="cards" id="dealer-cards"></div>
+    </section>
+
+    <div class="qualify-note">Дилер играет с парой четвёрок или выше</div>
+
+    <section class="zone board" aria-label="Общие карты">
+      <div class="cards" id="board-cards"></div>
+    </section>
+
+    <section class="zone" aria-label="Игрок">
+      <div class="cards" id="player-cards"></div>
+      <div class="zone-label">Вы <span class="hand-name" id="player-hand"></span></div>
+    </section>
+
+    <section class="bets" aria-label="Ставки">
+      <button type="button" class="spot" id="spot-bonus" title="AA Bonus — нажмите, чтобы добавить фишку">
+        <span class="spot-name">AA Bonus</span>
+        <span class="spot-amount" id="amt-bonus"></span>
+      </button>
+      <button type="button" class="spot spot-ante" id="spot-ante" title="Анте — нажмите, чтобы добавить фишку">
+        <span class="spot-name">Анте</span>
+        <span class="spot-amount" id="amt-ante"></span>
+      </button>
+      <div class="spot spot-call" id="spot-call">
+        <span class="spot-name">Колл ×2</span>
+        <span class="spot-amount" id="amt-call"></span>
+      </div>
+    </section>
+
+    <div class="message" id="message" role="status" aria-live="polite"></div>
+    <div class="result" id="result"></div>
+
+    <div class="chips" id="chips" role="radiogroup" aria-label="Номинал фишки"></div>
+    <div class="actions" id="actions"></div>
+  </main>
+
+  <footer class="stats" id="stats"></footer>
+
+  <dialog id="rules">
+    <form method="dialog" class="rules-body">
+      <h2>Правила Casino Hold'em</h2>
+      <ol>
+        <li>Поставьте <b>Анте</b> (и, по желанию, боковую ставку <b>AA Bonus</b>) и нажмите «Раздать».</li>
+        <li>Вы получаете 2 карты, дилер — 2 карты рубашкой вверх, на стол выкладывается флоп (3 общие карты).</li>
+        <li>Решите: <b>Фолд</b> — сбросить и потерять Анте, или <b>Колл</b> — поставить ещё 2× Анте.</li>
+        <li>После Колла открываются терн и ривер, дилер вскрывает карты. У каждого — лучшая комбинация из 5 карт из 7.</li>
+        <li>Дилер <b>квалифицируется</b> с парой четвёрок или выше.
+          <ul>
+            <li>Дилер не квалифицировался — Анте платит по таблице, Колл возвращается.</li>
+            <li>Вы сильнее — Анте платит по таблице, Колл 1:1.</li>
+            <li>Дилер сильнее — проигрываются обе ставки.</li>
+            <li>Ничья — обе ставки возвращаются.</li>
+          </ul>
+        </li>
+        <li><b>AA Bonus</b> считается по вашим 2 картам и флопу и не зависит от игры против дилера (выплачивается даже после фолда).</li>
+      </ol>
+      <div class="paytables">
+        <table>
+          <caption>Анте</caption>
+          <tbody id="pt-ante"></tbody>
+        </table>
+        <table>
+          <caption>AA Bonus</caption>
+          <tbody id="pt-bonus"></tbody>
+        </table>
+      </div>
+      <p class="hint">Клавиши: <kbd>Пробел</kbd> — раздать / колл, <kbd>F</kbd> — фолд.</p>
+      <button class="btn primary" value="close">Понятно</button>
+    </form>
+  </dialog>
+
+  <script src="js/poker.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
