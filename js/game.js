@@ -3,8 +3,10 @@
   'use strict';
 
   const P = window.Poker;
-  const STORAGE_KEY = 'casino-holdem.v1';
-  const START_BALANCE = 1000;
+  const A = window.Account;
+  const STORAGE_KEY = 'casino-holdem.v2';
+  const LEGACY_KEY = 'casino-holdem.v1';
+  const DEPOSIT_PRESETS = [100, 500, 1000, 5000];
   const CHIPS = [
     { v: 5, color: '#c62828' },
     { v: 10, color: '#1d4fa3' },
@@ -20,23 +22,23 @@
   const signed = n => (n > 0 ? '+' : n < 0 ? '−' : '') + fmt(Math.abs(n));
 
   // ---------- Сохранение ----------
-  function freshSave() {
-    return { balance: START_BALANCE, chip: 10, lastBets: null, stats: { hands: 0, net: 0, best: 0 } };
-  }
-
   function loadSave() {
+    let raw = null;
     try {
-      const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (s && Number.isFinite(s.balance) && s.stats) return s;
+      raw = JSON.parse(localStorage.getItem(STORAGE_KEY)) || JSON.parse(localStorage.getItem(LEGACY_KEY));
     } catch (e) { /* нет хранилища — играем без сохранения */ }
-    return freshSave();
+    const s = A.migrate(raw, Date.now());
+    A.forfeitPending(s, Date.now());
+    return s;
   }
 
   function persist() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(save)); } catch (e) { /* игнорируем */ }
   }
 
-  let save = loadSave();
+  const save = loadSave();
+  persist();
+  try { localStorage.removeItem(LEGACY_KEY); } catch (e) { /* игнорируем */ }
 
   // phase: 'bet' — ставки; 'busy' — анимация; 'decision' — колл/фолд; 'result' — итог раздачи.
   const state = {
@@ -130,8 +132,26 @@
     return save.balance < CHIPS[0].v * 3;
   }
 
+  // Баланс с всплывающей разницей (+/−) при каждом изменении.
+  let shownBalance = null;
+  function renderBalance() {
+    const el = $('balance');
+    const d = shownBalance === null ? 0 : save.balance - shownBalance;
+    shownBalance = save.balance;
+    el.textContent = fmt(save.balance);
+    if (!d) return;
+    const tag = document.createElement('span');
+    tag.className = 'delta ' + (d > 0 ? 'plus' : 'minus');
+    tag.textContent = signed(d);
+    tag.addEventListener('animationend', () => tag.remove());
+    $('balance-delta').appendChild(tag);
+    el.classList.remove('up', 'down');
+    void el.offsetWidth; // перезапуск анимации
+    el.classList.add(d > 0 ? 'up' : 'down');
+  }
+
   function render() {
-    $('balance').textContent = fmt(save.balance);
+    renderBalance();
     $('amt-ante').textContent = state.ante ? fmt(state.ante) : '';
     $('amt-bonus').textContent = state.bonus ? fmt(state.bonus) : '';
     $('amt-call').textContent = state.call ? fmt(state.call) : '';
@@ -148,7 +168,7 @@
     const list = [];
     if (state.phase === 'bet') {
       if (isBroke() && !state.ante) {
-        list.push(button('Начать заново (' + fmt(START_BALANCE) + ')', 'primary', restart));
+        list.push(button('Пополнить счёт', 'primary', () => openAccount(true)));
       } else {
         list.push(button('Очистить', '', clearBets, !state.ante && !state.bonus));
         if (!state.ante && save.lastBets && canAfford(save.lastBets.ante, save.lastBets.bonus)) {
@@ -162,7 +182,7 @@
       list.push(button('Колл ' + fmt(state.ante * 2), 'primary', call));
     } else if (state.phase === 'result') {
       if (isBroke()) {
-        list.push(button('Начать заново (' + fmt(START_BALANCE) + ')', 'primary', restart));
+        list.push(button('Пополнить счёт', 'primary', () => openAccount(true)));
       } else {
         list.push(button('Новая ставка', '', newBet));
         list.push(button('Раздать снова', 'primary', rebetAndDeal,
@@ -171,9 +191,11 @@
     }
     actions.replaceChildren(...list);
 
-    const st = save.stats;
+    const L = save.ledger;
     $('stats').textContent =
-      `Раздач: ${fmt(st.hands)} · Итог: ${signed(st.net)} · Лучший выигрыш за раздачу: ${fmt(st.best)}`;
+      `Раздач: ${fmt(L.hands)} · Выиграно: ${fmt(L.won)} · Проиграно: ${fmt(L.lost)} · ` +
+      `Внесено: ${fmt(L.deposited)} · Итог игры: ${signed(L.won - L.lost)}`;
+    if ($('account').open) renderAccount();
   }
 
   // ---------- Ставки ----------
@@ -230,18 +252,6 @@
     deal();
   }
 
-  function restart() {
-    const chip = save.chip;
-    save = freshSave();
-    save.chip = chip;
-    persist();
-    state.ante = state.bonus = state.call = 0;
-    state.phase = 'bet';
-    resetTable();
-    setMessage('Новый банк: ' + fmt(START_BALANCE) + '. Поставьте Анте.');
-    render();
-  }
-
   function resetTable() {
     clearTableMarks();
     setSlots($('dealer-cards'), 2);
@@ -253,7 +263,7 @@
   async function deal() {
     if (state.phase !== 'bet' || !state.ante || !canAfford(state.ante, state.bonus)) return;
 
-    save.balance -= state.ante + state.bonus;
+    A.stake(save, state.ante + state.bonus);
     save.lastBets = { ante: state.ante, bonus: state.bonus };
     persist();
 
@@ -310,7 +320,7 @@
 
   async function call() {
     if (state.phase !== 'decision') return;
-    save.balance -= state.ante * 2;
+    A.stake(save, state.ante * 2);
     state.call = state.ante * 2;
     persist();
     state.phase = 'busy';
@@ -340,7 +350,7 @@
       { spot: 'ante', label: 'Анте', stake: state.ante, ret: res.anteReturn, note: anteNote },
       { spot: 'call', label: 'Колл', stake: state.call, ret: res.callReturn,
         note: res.outcome === 'noqualify' ? 'возврат' : '' },
-    ]);
+    ], `${HISTORY_OUTCOME[res.outcome]}: ${pBest.name} против «${dBest.name}»`);
   }
 
   async function fold() {
@@ -357,11 +367,11 @@
 
     const would = P.compareScores(pBest.score, dBest.score) > 0 || !P.dealerQualifies(dBest.score);
     setMessage('Вы сбросили карты.' + (would ? ' (Колл бы выиграл.)' : ''));
-    finish([{ spot: 'ante', label: 'Анте', stake: state.ante, ret: 0, note: 'фолд' }]);
+    finish([{ spot: 'ante', label: 'Анте', stake: state.ante, ret: 0, note: 'фолд' }], 'Фолд: ' + pBest.name);
   }
 
   // Расчёт выплат, обновление баланса и статистики.
-  function finish(lines) {
+  function finish(lines, historyNote) {
     if (state.bonus) {
       lines.push({
         spot: 'bonus', label: 'AA Bonus', stake: state.bonus,
@@ -385,15 +395,111 @@
     html.push(`<span class="total ${totalCls}">Итого: ${signed(total)}</span>`);
     $('result').innerHTML = html.join(' · ');
 
-    save.balance += returned;
-    save.stats.hands += 1;
-    save.stats.net += total;
-    save.stats.best = Math.max(save.stats.best, total);
+    A.settle(save, returned, historyNote, Date.now());
     persist();
 
     state.phase = 'result';
     if (isBroke()) setMessage($('message').textContent + ' Фишки закончились.');
     render();
+  }
+
+  // ---------- Счёт ----------
+  const HISTORY_OUTCOME = { noqualify: 'Дилер не играет', win: 'Выигрыш', tie: 'Ничья', lose: 'Проигрыш' };
+  const HISTORY_TYPE = { start: 'Старт', deposit: 'Пополнение', hand: 'Раздача', reset: 'Сброс' };
+
+  const fmtDate = t => new Date(t).toLocaleString('ru-RU', {
+    day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  function renderAccount() {
+    const L = save.ledger;
+    const net = L.won - L.lost;
+    const rows = [
+      ['Баланс сейчас', fmt(save.balance), 'big'],
+      ['Было на начало учёта', fmt(L.start)],
+      ['Внесено', fmt(L.deposited)],
+      ['Выиграно', signed(L.won), L.won ? 'plus' : ''],
+      ['Проиграно', signed(-L.lost), L.lost ? 'minus' : ''],
+      ['Итог игры', signed(net), net > 0 ? 'plus' : net < 0 ? 'minus' : ''],
+      ['Раздач сыграно', fmt(L.hands)],
+      ['Лучшая раздача', signed(L.best)],
+    ];
+    if (save.pending) rows.push(['В игре (на столе)', fmt(save.pending)]);
+    $('ledger').innerHTML = rows
+      .map(([k, v, cls]) => `<tr class="${cls || ''}"><td>${k}</td><td>${v}</td></tr>`).join('');
+    $('ledger-since').textContent = 'Учёт ведётся с ' + fmtDate(L.since);
+
+    $('history').innerHTML = save.history.slice().reverse().map(h => {
+      const cls = h.amount > 0 ? 'plus' : h.amount < 0 ? 'minus' : '';
+      const amount = h.type === 'reset' ? '' : (h.type === 'start' ? fmt(h.amount) : signed(h.amount));
+      return `<li><span class="h-time">${fmtDate(h.t)}</span>` +
+        `<span class="h-note">${h.type === 'hand' ? escapeHtml(h.note || 'Раздача') : HISTORY_TYPE[h.type] || ''}</span>` +
+        `<span class="h-amt ${cls}">${amount}</span>` +
+        `<span class="h-bal">${fmt(h.balance)}</span></li>`;
+    }).join('');
+
+    const inHand = state.phase === 'busy' || state.phase === 'decision';
+    $('btn-reset-all').disabled = inHand;
+    $('btn-reset-all').title = inHand ? 'Доступно после окончания раздачи' : '';
+  }
+
+  function openAccount(focusDeposit) {
+    $('deposit-msg').textContent = '';
+    renderAccount();
+    if (!$('account').open) $('account').showModal();
+    if (focusDeposit) {
+      $('deposit-input').focus();
+      $('deposit-input').select();
+    }
+  }
+
+  function doDeposit(value) {
+    const n = A.deposit(save, value, Date.now());
+    if (!n) {
+      $('deposit-msg').textContent = `Введите целое число от 1 до ${fmt(A.MAX_DEPOSIT)}.`;
+      return;
+    }
+    persist();
+    $('deposit-msg').textContent = `Счёт пополнен на ${fmt(n)}.`;
+    if (state.phase === 'bet' || state.phase === 'result') {
+      setMessage(`Счёт пополнен на ${fmt(n)}. Поставьте Анте.`);
+    }
+    render();
+    renderAccount();
+  }
+
+  function bindAccount() {
+    const presets = $('deposit-presets');
+    for (const v of DEPOSIT_PRESETS) {
+      presets.appendChild(button('+' + fmt(v), 'small', () => doDeposit(v)));
+    }
+    $('deposit-form').addEventListener('submit', e => {
+      e.preventDefault();
+      doDeposit($('deposit-input').value);
+    });
+    $('btn-reset-stats').addEventListener('click', () => {
+      if (!confirm('Обнулить статистику и историю? Баланс останется ' + fmt(save.balance) + '.')) return;
+      A.resetStats(save, Date.now());
+      persist();
+      render();
+      renderAccount();
+    });
+    $('btn-reset-all').addEventListener('click', () => {
+      if (state.phase === 'busy' || state.phase === 'decision') return;
+      if (!confirm('Сбросить всё: баланс станет ' + fmt(A.START_BALANCE) + ', статистика и история обнулятся?')) return;
+      A.resetAll(save, Date.now());
+      persist();
+      state.ante = state.bonus = state.call = 0;
+      state.phase = 'bet';
+      resetTable();
+      setMessage('Новый банк: ' + fmt(A.START_BALANCE) + '. Поставьте Анте.');
+      render();
+      renderAccount();
+    });
   }
 
   // ---------- Инициализация ----------
@@ -433,13 +539,13 @@
       el.addEventListener('contextmenu', e => { e.preventDefault(); removeBet(spot); });
     }
     $('btn-rules').addEventListener('click', () => $('rules').showModal());
-    $('btn-reset').addEventListener('click', () => {
-      if (state.phase === 'busy' || state.phase === 'decision') return;
-      if (confirm('Сбросить баланс и статистику?')) restart();
-    });
+    $('btn-deposit').addEventListener('click', () => openAccount(true));
+    $('btn-account').addEventListener('click', () => openAccount(false));
+    $('stats').addEventListener('click', () => openAccount(false));
+    bindAccount();
 
     document.addEventListener('keydown', e => {
-      if (e.repeat || $('rules').open) return;
+      if (e.repeat || $('rules').open || $('account').open) return;
       if (document.activeElement && document.activeElement.tagName === 'BUTTON') return;
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
@@ -457,7 +563,7 @@
   bindEvents();
   resetTable();
   setMessage(isBroke()
-    ? 'Фишки закончились — начните заново.'
+    ? 'Фишки закончились — пополните счёт.'
     : 'Выберите фишку и поставьте Анте (и AA Bonus по желанию).');
   render();
 })();
