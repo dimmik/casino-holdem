@@ -16,6 +16,12 @@
     'Флеш', 'Фулл-хаус', 'Каре', 'Стрит-флеш', 'Роял-флеш',
   ];
 
+  // Вероятность лучшей 5-карточной комбинации из 7 карт (в долях), по категориям.
+  const HAND_PROB_7 = [
+    0.17412, 0.43822, 0.23496, 0.04830, 0.04619,
+    0.03025, 0.02596, 0.00168, 0.000248, 0.0000323,
+  ];
+
   // Выплаты по Анте, когда игрок выигрывает (или дилер не квалифицировался).
   const ANTE_PAYTABLE = [
     { cat: ROYAL_FLUSH, pays: 100 },
@@ -211,7 +217,7 @@
   }
 
   const Poker = {
-    SUIT_SYMBOL, HAND_NAMES, ANTE_PAYTABLE, BONUS_PAYTABLE,
+    SUIT_SYMBOL, HAND_NAMES, HAND_PROB_7, ANTE_PAYTABLE, BONUS_PAYTABLE,
     HIGH_CARD, PAIR, TWO_PAIR, TRIPS, STRAIGHT, FLUSH, FULL_HOUSE, QUADS, STRAIGHT_FLUSH, ROYAL_FLUSH,
     rankLabel, cardLabel, makeDeck, shuffle, eval5, compareScores, bestHand, describe,
     dealerQualifies, antePays, bonusPays, settleCall,

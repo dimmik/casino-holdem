@@ -331,6 +331,7 @@
 
     const pBest = P.bestHand(state.player.concat(state.board));
     const dBest = P.bestHand(state.dealer.concat(state.board));
+    A.recordCombos(save, pBest.cat, dBest.cat);
     $('player-hand').textContent = pBest.name;
     $('dealer-hand').textContent = dBest.name;
 
@@ -362,6 +363,7 @@
     await revealRest();
     const dBest = P.bestHand(state.dealer.concat(state.board));
     const pBest = P.bestHand(state.player.concat(state.board));
+    A.recordCombos(save, pBest.cat, dBest.cat);
     $('dealer-hand').textContent = dBest.name;
     $('player-hand').textContent = pBest.name;
 
@@ -432,6 +434,7 @@
     $('ledger').innerHTML = rows
       .map(([k, v, cls]) => `<tr class="${cls || ''}"><td>${k}</td><td>${v}</td></tr>`).join('');
     $('ledger-since').textContent = 'Учёт ведётся с ' + fmtDate(L.since);
+    renderCombos(L.combos);
 
     $('history').innerHTML = save.history.slice().reverse().map(h => {
       const cls = h.amount > 0 ? 'plus' : h.amount < 0 ? 'minus' : '';
@@ -445,6 +448,26 @@
     const inHand = state.phase === 'busy' || state.phase === 'decision';
     $('btn-reset-all').disabled = inHand;
     $('btn-reset-all').title = inHand ? 'Доступно после окончания раздачи' : '';
+  }
+
+  // Процент с точностью, достаточной для редких комбинаций.
+  function pct(x) {
+    const v = x * 100;
+    if (v === 0) return '0%';
+    const digits = v >= 10 ? 1 : v >= 1 ? 2 : v >= 0.1 ? 3 : 4;
+    return v.toLocaleString('ru-RU', { maximumFractionDigits: digits }) + '%';
+  }
+
+  function renderCombos(c) {
+    $('combos-count').textContent = fmt(c.n);
+    const cell = k => c.n ? `${fmt(k)} <small>${pct(k / c.n)}</small>` : '—';
+    // От старших комбинаций к младшим.
+    $('combos').innerHTML = P.HAND_NAMES.map((name, cat) =>
+      `<tr><td>${name}</td>` +
+      `<td>${cell(c.player[cat])}</td>` +
+      `<td>${cell(c.dealer[cat])}</td>` +
+      `<td class="theory">${pct(P.HAND_PROB_7[cat])}</td></tr>`
+    ).reverse().join('');
   }
 
   function openAccount(focusDeposit) {

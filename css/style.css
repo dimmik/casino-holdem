@@ -434,3 +434,16 @@ kbd {
 }
 
 .close-row { margin-top: 18px; text-align: right; }
+
+/* ---------- Статистика комбинаций ---------- */
+.combos-box { margin-top: 6px; }
+.combos-box summary { cursor: pointer; color: var(--gold); font-weight: 700; padding: 6px 0; }
+.combos { width: 100%; border-collapse: collapse; font-size: .88rem; font-variant-numeric: tabular-nums; }
+.combos th { text-align: right; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+.combos th:first-child, .combos td:first-child { text-align: left; }
+.combos td { text-align: right; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.08); white-space: nowrap; }
+.combos td small { color: var(--muted); margin-left: 4px; }
+.combos .theory { color: var(--muted); }
+@media (max-width: 480px) {
+  .combos td small { display: block; margin: 0; }
+}

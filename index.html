@@ -71,6 +71,16 @@
       <table class="ledger"><tbody id="ledger"></tbody></table>
       <p class="hint" id="ledger-since"></p>
 
+      <details class="combos-box">
+        <summary>Статистика комбинаций (<span id="combos-count">0</span> раздач)</summary>
+        <table class="combos">
+          <thead><tr><th>Комбинация</th><th>Вы</th><th>Дилер</th><th>Теория</th></tr></thead>
+          <tbody id="combos"></tbody>
+        </table>
+        <p class="hint">Лучшая комбинация из 7 карт после ривера, включая раздачи со сбросом.
+          «Теория» — средняя частота в холдеме; на малом числе раздач отклонения нормальны.</p>
+      </details>
+
       <h3>Пополнить</h3>
       <form id="deposit-form" class="deposit" novalidate>
         <div class="deposit-presets" id="deposit-presets"></div>
