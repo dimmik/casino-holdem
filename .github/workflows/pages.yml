@@ -36,6 +36,9 @@ jobs:
         run: |
           mkdir -p _site
           cp -r index.html css js _site/
+          # Версия в ссылках на css/js, чтобы браузер не держал старые файлы после обновления.
+          sed -i -E "s#(href|src)=\"((css|js)/[^\"]+)\"#\1=\"\2?v=${GITHUB_SHA::8}\"#g" _site/index.html
+          grep -E '(css|js)/[^"]+\?v=' _site/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
