@@ -70,7 +70,7 @@
     const r = P.rankLabel(c.r);
     const s = P.SUIT_SYMBOL[c.s];
     el.classList.remove('back');
-    el.classList.toggle('red', c.s === 'h' || c.s === 'd');
+    el.classList.add('suit-' + c.s); // четырёхцветная колода: цвет по масти
     el.setAttribute('aria-label', P.cardLabel(c));
     el.innerHTML =
       `<span class="corner">${r}<small>${s}</small></span>` +
