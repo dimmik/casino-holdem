@@ -5,7 +5,11 @@
   --gold-dark: #a8862f;
   --ink: #f4f1e6;
   --muted: #b9d6c3;
-  --red: #c8102e;
+  /* Четырёхцветная колода */
+  --suit-s: #1a1a1a;
+  --suit-h: #c8102e;
+  --suit-d: #1556c0;
+  --suit-c: #1d7a32;
   --black: #1a1a1a;
   --vh: 100vh;
   /* Высота всего, кроме трёх рядов карт: карты подстраиваются, чтобы стол влезал в экран. */
@@ -137,7 +141,10 @@ button { font: inherit; }
   transition: transform .2s, box-shadow .2s, opacity .2s;
 }
 
-.card.red { color: var(--red); }
+.card.suit-s { color: var(--suit-s); }
+.card.suit-h { color: var(--suit-h); }
+.card.suit-d { color: var(--suit-d); }
+.card.suit-c { color: var(--suit-c); }
 
 .card .corner {
   position: absolute;
