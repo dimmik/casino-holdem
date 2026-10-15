@@ -507,3 +507,6 @@ kbd {
   .balance { margin-left: 0; }
   .top-actions { margin-left: auto; }
 }
+.bonus-summary { margin-top: 10px; }
+.combos-box + .combos-box { margin-top: 4px; }
+.combos td:first-child { white-space: normal; }
