@@ -33,17 +33,20 @@
   ];
 
   // AA Bonus: по 2 картам игрока + флоп, от пары тузов и выше.
+  // prob — точная вероятность комбинации из 5 карт (перебор всех 2 598 960 вариантов).
   const BONUS_PAYTABLE = [
-    { cat: ROYAL_FLUSH, pays: 100 },
-    { cat: STRAIGHT_FLUSH, pays: 50 },
-    { cat: QUADS, pays: 40 },
-    { cat: FULL_HOUSE, pays: 30 },
-    { cat: FLUSH, pays: 20 },
-    { cat: STRAIGHT, pays: 7 },
-    { cat: TRIPS, pays: 7 },
-    { cat: TWO_PAIR, pays: 7 },
-    { cat: PAIR, pays: 7, label: 'Пара тузов' },
+    { cat: ROYAL_FLUSH, pays: 100, prob: 0.0000015391 },
+    { cat: STRAIGHT_FLUSH, pays: 50, prob: 0.0000138517 },
+    { cat: QUADS, pays: 40, prob: 0.0002400960 },
+    { cat: FULL_HOUSE, pays: 30, prob: 0.0014405762 },
+    { cat: FLUSH, pays: 20, prob: 0.0019654015 },
+    { cat: STRAIGHT, pays: 7, prob: 0.0039246468 },
+    { cat: TRIPS, pays: 7, prob: 0.0211284514 },
+    { cat: TWO_PAIR, pays: 7, prob: 0.0475390156 },
+    { cat: PAIR, pays: 7, label: 'Пара тузов', prob: 0.0325053098 },
   ];
+  // Итог по AA Bonus: шанс выигрыша, средняя выплата при выигрыше (N к 1), возврат ставок.
+  const BONUS_THEORY = { hit: 0.1087589, avgPays: 7.6192, rtp: 0.9374165 };
 
   function rankLabel(r) {
     return RANK_LABEL[r] || String(r);
@@ -182,11 +185,16 @@
 
   // Множитель AA Bonus (0 — ставка проиграна).
   function bonusPays(fiveCards) {
+    return bonusResult(fiveCards).pays;
+  }
+
+  // Категория 5 карт и выплата AA Bonus (pays = 0 — ставка проиграна).
+  function bonusResult(fiveCards) {
     const score = eval5(fiveCards);
     const cat = score[0];
-    if (cat === PAIR) return score[1] === 14 ? 7 : 0;
-    for (const row of BONUS_PAYTABLE) if (cat === row.cat) return row.pays;
-    return 0;
+    if (cat === PAIR) return { cat, pays: score[1] === 14 ? 7 : 0 };
+    for (const row of BONUS_PAYTABLE) if (cat === row.cat) return { cat, pays: row.pays };
+    return { cat, pays: 0 };
   }
 
   // Полный расчёт раздачи после Колла.
@@ -220,7 +228,7 @@
     SUIT_SYMBOL, HAND_NAMES, HAND_PROB_7, ANTE_PAYTABLE, BONUS_PAYTABLE,
     HIGH_CARD, PAIR, TWO_PAIR, TRIPS, STRAIGHT, FLUSH, FULL_HOUSE, QUADS, STRAIGHT_FLUSH, ROYAL_FLUSH,
     rankLabel, cardLabel, makeDeck, shuffle, eval5, compareScores, bestHand, describe,
-    dealerQualifies, antePays, bonusPays, settleCall,
+    BONUS_THEORY, dealerQualifies, antePays, bonusPays, bonusResult, settleCall,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Poker;

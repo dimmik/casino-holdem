@@ -45,7 +45,7 @@
     phase: 'bet',
     ante: 0, bonus: 0, call: 0,
     player: [], dealer: [], board: [],
-    bonusMult: 0,
+    bonusMult: 0, bonusCat: 0,
   };
 
   // ---------- Карты ----------
@@ -294,7 +294,9 @@
     const now = P.bestHand(five);
     $('player-hand').textContent = now.name;
 
-    state.bonusMult = state.bonus ? P.bonusPays(five) : 0;
+    const bonusRes = P.bonusResult(five);
+    state.bonusMult = state.bonus ? bonusRes.pays : 0;
+    state.bonusCat = bonusRes.cat;
     if (state.bonus) {
       $('result').innerHTML = state.bonusMult
         ? `<span class="plus">AA Bonus сыграл: ${now.name} — ${state.bonusMult}:1</span>`
@@ -397,6 +399,7 @@
     html.push(`<span class="total ${totalCls}">Итого: ${signed(total)}</span>`);
     $('result').innerHTML = html.join(' · ');
 
+    if (state.bonus) A.recordBonus(save, state.bonus, state.bonusCat, state.bonusMult);
     A.settle(save, returned, historyNote, Date.now());
     persist();
 
@@ -435,6 +438,7 @@
       .map(([k, v, cls]) => `<tr class="${cls || ''}"><td>${k}</td><td>${v}</td></tr>`).join('');
     $('ledger-since').textContent = 'Учёт ведётся с ' + fmtDate(L.since);
     renderCombos(L.combos);
+    renderBonus(L.bonus);
 
     $('history').innerHTML = save.history.slice().reverse().map(h => {
       const cls = h.amount > 0 ? 'plus' : h.amount < 0 ? 'minus' : '';
@@ -456,6 +460,30 @@
     if (v === 0) return '0%';
     const digits = v >= 10 ? 1 : v >= 1 ? 2 : v >= 0.1 ? 3 : 4;
     return v.toLocaleString('ru-RU', { maximumFractionDigits: digits }) + '%';
+  }
+
+  function renderBonus(b) {
+    const T = P.BONUS_THEORY;
+    const wins = b.hits.reduce((a, x) => a + x, 0);
+    const paysSum = P.BONUS_PAYTABLE.reduce((a, r) => a + b.hits[r.cat] * r.pays, 0);
+    $('bonus-count').textContent = b.n ? `сыграл ${fmt(wins)} из ${fmt(b.n)}` : 'ставок не было';
+    const cell = k => b.n ? `${fmt(k)} <small>${pct(k / b.n)}</small>` : '—';
+    $('bonus-rows').innerHTML = P.BONUS_PAYTABLE.map(r =>
+      `<tr><td>${r.label || P.HAND_NAMES[r.cat]}</td><td>${r.pays}:1</td>` +
+      `<td>${cell(b.hits[r.cat])}</td><td class="theory">${pct(r.prob)}</td></tr>`
+    ).join('');
+    const odds = x => x.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' : 1';
+    const net = b.returned - b.staked;
+    const rows = [
+      ['Сыграл', b.n ? `${fmt(wins)} из ${fmt(b.n)} <small>${pct(wins / b.n)}</small>` : '—', pct(T.hit)],
+      ['Средняя выплата за выигрыш', wins ? odds(paysSum / wins) : '—', odds(T.avgPays)],
+      ['Поставлено', fmt(b.staked), ''],
+      ['Возвращено (с выигрышами)', fmt(b.returned), ''],
+      ['Итог по AA Bonus', `<span class="${net > 0 ? 'plus' : net < 0 ? 'minus' : ''}">${signed(net)}</span>`, ''],
+      ['Возврат ставок', b.staked ? pct(b.returned / b.staked) : '—', pct(T.rtp)],
+    ];
+    $('bonus-summary').innerHTML = rows
+      .map(([k, v, t]) => `<tr><td>${k}</td><td>${v}</td><td class="theory">${t}</td></tr>`).join('');
   }
 
   function renderCombos(c) {

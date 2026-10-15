@@ -95,3 +95,13 @@ test('теоретические вероятности в сумме дают 1
   const sum = P.HAND_PROB_7.reduce((a, b) => a + b, 0);
   assert.ok(Math.abs(sum - 1) < 0.001, sum);
 });
+
+test('теория AA Bonus согласована с таблицей выплат', () => {
+  const hit = P.BONUS_PAYTABLE.reduce((a, r) => a + r.prob, 0);
+  const rtp = P.BONUS_PAYTABLE.reduce((a, r) => a + r.prob * (r.pays + 1), 0);
+  assert.ok(Math.abs(hit - P.BONUS_THEORY.hit) < 1e-6, hit);
+  assert.ok(Math.abs(rtp - P.BONUS_THEORY.rtp) < 1e-6, rtp);
+  assert.ok(Math.abs(rtp / hit - 1 - P.BONUS_THEORY.avgPays) < 1e-3);
+  assert.deepStrictEqual(P.bonusResult(cards('Ah Ad 9s 3c 2h')), { cat: P.PAIR, pays: 7 });
+  assert.deepStrictEqual(P.bonusResult(cards('Kh Kd 9s 3c 2h')), { cat: P.PAIR, pays: 0 });
+});

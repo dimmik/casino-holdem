@@ -88,3 +88,17 @@ test('статистика комбинаций', () => {
   delete old.ledger.combos;
   assert.strictEqual(A.migrate(old, 3).ledger.combos.n, 0);
 });
+
+test('статистика AA Bonus', () => {
+  const s = A.fresh(1);
+  A.recordBonus(s, 10, 2, 7);   // две пары, 7:1
+  A.recordBonus(s, 10, 0, 0);   // проигрыш
+  A.recordBonus(s, 10, 6, 30);  // фулл-хаус, 30:1
+  const b = s.ledger.bonus;
+  assert.deepStrictEqual([b.n, b.staked, b.returned, b.hits[2], b.hits[6]], [3, 30, 80 + 310, 1, 1]);
+  const old = A.fresh(1);
+  delete old.ledger.bonus;
+  assert.strictEqual(A.migrate(old, 2).ledger.bonus.n, 0);
+  A.resetStats(s, 3);
+  assert.strictEqual(s.ledger.bonus.n, 0);
+});
